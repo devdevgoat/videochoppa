@@ -23,6 +23,22 @@
 Requires Python 3.4 or later.
 Author: Patrick Fay
 Date: 23-09-2015
+
+Modder: Devdevgoat
+Date: 30-12-2022
+Adding some features to support amv creation:
+    *=pending
+    - Time Skipping
+        - left move back 10 sec
+        - right move fwd 10 sec
+        - hold? shift to scrub?*
+    - Clip Logger for clip tagging
+        - Up arrow to start clip tag*
+        - down arrow to end clip tag*
+            - write the following to clip log:
+                -start
+                -end
+                -filename
 """
 
 # Tested with Python 3.7.4, tkinter/Tk 8.6.9 on macOS 10.13.6 only.
@@ -31,7 +47,7 @@ __version__ = '20.05.04'  # mrJean1 at Gmail
 # import external libraries
 import vlc
 # import standard libraries
-import sys
+import sys, json, csv
 if sys.version_info[0] < 3:
     import Tkinter as Tk
     from Tkinter import ttk
@@ -42,7 +58,7 @@ else:
     from tkinter import ttk
     from tkinter.filedialog import askopenfilename
     from tkinter.messagebox import showerror
-from os.path import basename, expanduser, isfile, join as joined
+from os.path import basename, expanduser, isfile, exists, join as joined
 from pathlib import Path
 import time
 
@@ -270,6 +286,30 @@ class Player(Tk.Frame):
         self._AnchorButtonsPanel()
 
         self.OnTick()  # set the timer up
+        
+        self.GetLog()
+        self.currentClipId = 0
+
+    def GetLog(self):
+        log = False
+        if self.player.get_media():
+            media = self.player.get_media()
+            filename = basename(self.bytes_to_str(media.get_mrl()))
+            if _isWindows:
+                filebase = 'cliplogs\\'
+            else:
+                filebase = 'cliplogs/'
+            self.logname = f"{filebase}{filename.split('.')[0]}.csv"
+            if not exists(self.logname):
+                logFile = open(self.logname,'w')
+                logFile.write('id,start_clip_ms,end_clip_ms,desc,characters\n')
+                logFile.close
+            else:
+                logFile = open(self.logname,'r')
+                log = list(csv.DictReader(logFile))
+                logFile.close()
+                self.lastClipId = self.getMaxClipId()
+        self.log=log
 
     def OnClose(self, *unused):
         """Closes the window and quit.
@@ -344,6 +384,7 @@ class Player(Tk.Frame):
                                 title = "Choose a video",
                                 filetypes = (("all files", "*.*"),
                                              ("mp4 files", "*.mp4"),
+                                             ("mkv files", "*.mkv"),
                                              ("mov files", "*.mov")))
         self._Play(video)
 
@@ -362,7 +403,7 @@ class Player(Tk.Frame):
             m = self.Instance.media_new(str(video))  # Path, unicode
             self.player.set_media(m)
             self.parent.title("tkVLCplayer - %s" % (basename(video),))
-
+            self.GetLog()
             # set the window id where to render VLC's video output
             h = self.videopanel.winfo_id()  # .winfo_visualid()?
             if _isWindows:
@@ -476,12 +517,14 @@ class Player(Tk.Frame):
 
     def Skip(self, sec, *unused):
         if self.player:
-            print(int(self.player.get_time() * 1e-3))
-            print()
-            self.player.set_time(int(self.player.get_time()+10000 * 1e-3))  # milliseconds
-            print(int(self.player.get_time() * 1e-3))
+            timeAdd = int(sec * 1e3)
+            currentTime = int(self.timeVar.get() * 1e3)
+            newTime = currentTime + timeAdd
+            print(f"Changing time from {currentTime} to {newTime} by adding {timeAdd} ms")
+            self.player.set_time(newTime) 
     def LogTime(self, *unused):
-        print(self.player.get_time() * 1e-3)
+        if self.player:
+            print(self.player.get_time() * 1e-3)
         
     def OnTime(self, *unused):
         if self.player:
@@ -525,6 +568,98 @@ class Player(Tk.Frame):
         """
         self.OnStop()
         showerror(self.parent.title(), message)
+    
+    def bytes_to_str(self,b):
+        """Translate bytes to string.
+        """
+        if isinstance(b, bytes):
+            return b.decode(DEFAULT_ENCODING)
+        else:
+            return b
+
+    ## Stolen from the bottom of vlc.py
+    def mspf(self):
+            """Milliseconds per frame"""
+            return int(1000 // (self.player.get_fps() or 25))
+
+    def print_info(self):
+        media = self.player.get_media()
+        print('State: %s' % self.player.get_state())
+        print('Media: %s' % self.bytes_to_str(media.get_mrl()))
+        print('Track: %s/%s' % (self.player.video_get_track(), self.player.video_get_track_count()))
+        print('Current time: %s/%s' % (self.player.get_time(), media.get_duration()))
+        print('Position: %s' % self.player.get_position())
+        print('FPS: %s (%d ms)' % (self.player.get_fps(), self.mspf()))
+        print('Rate: %s' % self.player.get_rate())
+        print('Video size: %s' % str(self.player.video_get_size(0)))  # num=0
+        print('Scale: %s' % self.player.video_get_scale())
+        print('Aspect ratio: %s' % self.player.video_get_aspect_ratio())
+
+    def sec_forward(self):
+        """Go forward one sec"""
+        if self.player.get_media():
+            self.player.set_time(self.player.get_time() + 1000)
+
+    def sec_backward(self):
+        """Go backward one sec"""
+        if self.player.get_media():
+            self.player.set_time(self.player.get_time() - 1000)
+
+    def frame_forward(self):
+        """Go forward one frame"""
+        if self.player.get_media():
+            if self.player.is_playing():
+                self.OnPause()
+            self.player.set_time(self.player.get_time() + self.mspf())
+
+    def frame_backward(self):
+        """Go backward one frame"""
+        if self.player.get_media():
+            if self.player.is_playing():
+                self.OnPause()
+            self.player.set_time(self.player.get_time() - self.mspf())
+
+    def log_data(self):
+        if self.player.get_media():
+            media = self.player.get_media()
+            currentTimeMs = str(self.player.get_time())
+            outRow = [id,clipstart,clipend,+'\n']
+            logFIle = open(f'{self.cliplog}.txt', "a")  # append modexxx
+            logFIle.write('|'.join(outRow))
+            logFIle.close()
+            
+
+    def logClip(self):
+        thisClipId = self.getMaxClipId() + 1
+        print(f'New Clip id:{thisClipId}')
+        with open(self.logname,'a') as f:
+            out = csv.writer(f, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+            out.writerow([thisClipId,self.pendingClipStartMs,self.pendingClipEndMs])
+        self.lastClipId = thisClipId
+        self.pendingClipStartMs = None
+        self.pendingClipEndMs = None
+        self.GetLog()
+    
+    def getMaxClipId(self):
+        maxClip = 0
+        if self.log:
+            print(json.dumps(self.log,indent=4))
+            for i in self.log:
+                if int(i['id']) > maxClip:
+                    maxClip = int(i['id'])
+        return maxClip
+    
+    def startClip(self):
+        if self.player.get_media():
+            self.pendingClipStartMs = self.player.get_time()
+
+    def endClip(self):
+        if self.player.get_media():
+            if not self.pendingClipStartMs:
+                self.pendingClipStartMs = self.player.get_time()
+            else:
+                self.pendingClipEndMs = self.player.get_time()
+                self.logClip()
 
 
 if __name__ == "__main__":
@@ -569,10 +704,17 @@ if __name__ == "__main__":
     root.protocol("WM_DELETE_WINDOW", player.OnClose)  # XXX unnecessary (on macOS)
     
     
-    root.bind('<Up>',lambda x: player.LogTime())
     root.bind('<Left>',lambda x: player.Skip(-10))
     root.bind('<Right>',lambda x: player.Skip(10))
+    root.bind('<Shift-Left>',lambda x: player.frame_backward())
+    root.bind('<Shift-Right>',lambda x: player.frame_forward())
+    root.bind('<Escape>',lambda x: player.quit())
+    root.bind('<Up>',lambda x: player.startClip())
+    root.bind('<Down>',lambda x: player.endClip())
+    root.bind('<p>',lambda x: print(json.dumps(player.log, indent=4)))
+    root.bind('<space>',lambda x: player.OnPause())
 
-
-
+    player._Play('gurlag01.mkv')
+    print(player.print_info())
+    root.focus_force()
     root.mainloop()
