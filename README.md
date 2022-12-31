@@ -1,5 +1,11 @@
 # Videochoppa
- Need a simple way to tag video files for clipping later.
+
+I needed a simple way to tag video files for clipping later, so I hacked up an example Python VLC/Tkinter file I found online! The goal of this project is to generate a file I can later use to generate clips from a video file. This is a laborous task in most video editors, but it fairly easy to do in python if you know the timestamps you want. This program lets me quickly save timestamps to a file for chopping later! 
+
+Why do I want to do that? For makeing [AMVs](https://www.youtube.com/c/devdevgoat) of course!
+
+![](img/choppa.png)
+
 
 # Install
 
