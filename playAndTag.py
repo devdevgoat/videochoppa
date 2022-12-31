@@ -221,6 +221,11 @@ class Player(Tk.Frame):
         self.canvas.pack(fill=Tk.BOTH, expand=1)
         self.videopanel.pack(fill=Tk.BOTH, expand=1)
 
+        # my attempt at a clips pannel
+
+        # self.clipspanel = Tk.Toplevel(self.parent)
+        # self.buttons_panel.title("Clip Log")
+
         # panel to hold buttons
         self.buttons_panel = Tk.Toplevel(self.parent)
         self.buttons_panel.title("")
@@ -522,6 +527,7 @@ class Player(Tk.Frame):
             newTime = currentTime + timeAdd
             print(f"Changing time from {currentTime} to {newTime} by adding {timeAdd} ms")
             self.player.set_time(newTime) 
+    
     def LogTime(self, *unused):
         if self.player:
             print(self.player.get_time() * 1e-3)
@@ -595,29 +601,22 @@ class Player(Tk.Frame):
         print('Scale: %s' % self.player.video_get_scale())
         print('Aspect ratio: %s' % self.player.video_get_aspect_ratio())
 
-    def sec_forward(self):
-        """Go forward one sec"""
-        if self.player.get_media():
-            self.player.set_time(self.player.get_time() + 1000)
-
-    def sec_backward(self):
+    def skip_sec(self,seconds=1):
         """Go backward one sec"""
         if self.player.get_media():
-            self.player.set_time(self.player.get_time() - 1000)
-
-    def frame_forward(self):
-        """Go forward one frame"""
-        if self.player.get_media():
             if self.player.is_playing():
-                self.OnPause()
-            self.player.set_time(self.player.get_time() + self.mspf())
+                self.player.set_time(self.player.get_time() + (seconds*1000))
+            else:
+                frameDir = 1 if seconds > 0 else -1
+                self.skip_frame(frameDir)
 
-    def frame_backward(self):
+
+    def skip_frame(self,frames=1):
         """Go backward one frame"""
         if self.player.get_media():
             if self.player.is_playing():
                 self.OnPause()
-            self.player.set_time(self.player.get_time() - self.mspf())
+            self.player.set_time(self.player.get_time() + (frames*self.mspf()))
 
     def log_data(self):
         if self.player.get_media():
@@ -631,7 +630,6 @@ class Player(Tk.Frame):
 
     def logClip(self):
         thisClipId = self.getMaxClipId() + 1
-        print(f'New Clip id:{thisClipId}')
         with open(self.logname,'a') as f:
             out = csv.writer(f, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
             out.writerow([thisClipId,self.pendingClipStartMs,self.pendingClipEndMs])
@@ -639,11 +637,12 @@ class Player(Tk.Frame):
         self.pendingClipStartMs = None
         self.pendingClipEndMs = None
         self.GetLog()
+        print(f'Added clip {self.lastClipId} to log.')
     
     def getMaxClipId(self):
         maxClip = 0
         if self.log:
-            print(json.dumps(self.log,indent=4))
+            # print(json.dumps(self.log,indent=4))
             for i in self.log:
                 if int(i['id']) > maxClip:
                     maxClip = int(i['id'])
@@ -704,10 +703,10 @@ if __name__ == "__main__":
     root.protocol("WM_DELETE_WINDOW", player.OnClose)  # XXX unnecessary (on macOS)
     
     
-    root.bind('<Left>',lambda x: player.Skip(-10))
-    root.bind('<Right>',lambda x: player.Skip(10))
-    root.bind('<Shift-Left>',lambda x: player.frame_backward())
-    root.bind('<Shift-Right>',lambda x: player.frame_forward())
+    root.bind('<Left>',lambda x: player.skip_sec(-10))
+    root.bind('<Right>',lambda x: player.skip_sec(10))
+    root.bind('<Shift-Left>',lambda x: player.skip_frame(-2))
+    root.bind('<Shift-Right>',lambda x: player.skip_frame(2))
     root.bind('<Escape>',lambda x: player.quit())
     root.bind('<Up>',lambda x: player.startClip())
     root.bind('<Down>',lambda x: player.endClip())
@@ -717,4 +716,6 @@ if __name__ == "__main__":
     player._Play('gurlag01.mkv')
     print(player.print_info())
     root.focus_force()
+
+    
     root.mainloop()

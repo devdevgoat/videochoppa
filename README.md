@@ -67,7 +67,7 @@ id|start_clip_ms|end_clip_ms|desc|characters
 - gui
   - clip log
   - click log entry to play?
-
+  - clip generator button to cut video
 
 ## Short cuts
 key | action
