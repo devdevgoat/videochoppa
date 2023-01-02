@@ -334,7 +334,7 @@ class Player(Tk.Frame):
         self.log = getLog(self.logname)
         self.maxId = self.getMaxId()
         # Display the clip manager
-        self.clipManager = ClipManager(self.logname)
+        self.clipManager = ClipManager(self)
         self.clipManager.lower()
 
     def OnClose(self, *unused):
@@ -708,11 +708,12 @@ class PopUp(Tk.Tk):
         return 
 
 class ClipManager(Tk.Tk):
-    def __init__(self, logName):      
+    def __init__(self, parent):      
         Tk.Tk.__init__(self)
-        self.geometry("400x500+504+20")
+        self.parent = parent
+        self.geometry("400x345+504+20")
         self.wm_title("Clips Manager")
-        self.log = getLog(logName)
+        self.log = getLog(parent.logname)
         self.buildList()
 
     def buildList(self):
@@ -725,11 +726,20 @@ class ClipManager(Tk.Tk):
             fromTo = f"{i['startMs']}:{i['endMs']}"
             self.listBox.insert(i['id'],f"{str(i['id']).zfill(4)} | {fromTo} | {i['desc']}")
         self.listBox.pack()
-    
+        self.bind('<<ListboxSelect>>', self.onselect)
+
     def addEntry(self,logEntry):
         print(logEntry)
         fromTo = f"{logEntry['startMs']}:{logEntry['endMs']}"
         self.listBox.insert(logEntry['id'],f"{str(logEntry['id']).zfill(4)} | {fromTo} | {logEntry['desc']}")
+
+    def onselect(self,evt):
+        # Note here that Tkinter passes an event object to onselect()
+        w = evt.widget
+        index = int(w.curselection()[0])
+        value = w.get(index)
+        print('You selected item %d: "%s"' % (index+1, value))
+        self.parent.player.set_time(int(self.parent.log[index]["startMs"]))
 
 
 
@@ -805,6 +815,7 @@ if __name__ == "__main__":
     root.bind('<p>',lambda x: print(json.dumps(player.log, indent=4)))
     root.bind('<space>',lambda x: player.OnPause())
     root.bind('<r>',lambda x: player._Play('gurlag01.mkv'))
+    
 
     
     root.focus_force()
