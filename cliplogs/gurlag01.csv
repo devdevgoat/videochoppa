@@ -1,4 +1,4 @@
-id,start_clip_ms,end_clip_ms,desc,characters
+id,startMs,endMs,desc,chars
 1,0,90018,"intro",[]
 2,1321805,1367518,"drill through the surface",[]
 3,1445013,1534939,"outro",[]

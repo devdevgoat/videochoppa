@@ -46,6 +46,7 @@ __version__ = '20.05.04'  # mrJean1 at Gmail
 
 # import external libraries
 import vlc
+from vlc import Position, VideoMarqueeOption, str_to_bytes
 # import standard libraries
 import sys, json, csv
 if sys.version_info[0] < 3:
@@ -56,6 +57,7 @@ if sys.version_info[0] < 3:
 else:
     import tkinter as Tk
     from tkinter import ttk
+    from tkinter import Toplevel
     from tkinter.filedialog import askopenfilename
     from tkinter.messagebox import showerror
 from os.path import basename, expanduser, isfile, exists, join as joined
@@ -221,6 +223,13 @@ class Player(Tk.Frame):
         self.canvas.pack(fill=Tk.BOTH, expand=1)
         self.videopanel.pack(fill=Tk.BOTH, expand=1)
 
+         # rl: lets try adding some stats
+        self.statsLable = Tk.Label(self.parent, text='Stats:')
+        self.statsLable.pack()
+        self.statsLable.config(font=("Courier", 44))
+        self.statsLable.config(fg="#0000FF")
+        self.statsLable.config(bg="yellow")
+       
         # my attempt at a clips pannel
 
         # self.clipspanel = Tk.Toplevel(self.parent)
@@ -261,7 +270,7 @@ class Player(Tk.Frame):
 
 
         # VLC player
-        args = []
+        args = ["--sub-source=marq"]
         if _isLinux:
             args.append('--no-xlib')
         self.Instance = vlc.Instance(args)
@@ -291,11 +300,22 @@ class Player(Tk.Frame):
         self._AnchorButtonsPanel()
 
         self.OnTick()  # set the timer up
+        # Some marquee examples.  Marquee requires '--sub-source marq' in the
+        # Instance() call above, see <http://www.videolan.org/doc/play-howto/en/ch04.html>
+        self.player.video_set_marquee_int(VideoMarqueeOption.Enable, 1)
+        self.player.video_set_marquee_int(VideoMarqueeOption.Size, 48)  # pixels
+
+        # the _Enum type isn't being converted properly into int's during the ctypes casting
+        # when you use ints natively, it works
+        # Marquee position: 0=center, 1=left, 2=right, 4=top, 8=bottom, you can also use combinations of these values, eg 6 = top-right. default value: -1
+        # self.player.video_set_marquee_int(4, 8)
+        self.player.video_set_marquee_int(VideoMarqueeOption.Position, Position.top_left)
+        self.player.video_set_marquee_int(VideoMarqueeOption.Timeout, 0)  # millisec, 0==forever
+        self.player.video_set_marquee_int(VideoMarqueeOption.Refresh, 1000)  # millisec (or sec?)
         
-        self.GetLog()
         self.currentClipId = 0
 
-    def GetLog(self):
+    def createOrGetLog(self):
         log = False
         if self.player.get_media():
             media = self.player.get_media()
@@ -305,16 +325,17 @@ class Player(Tk.Frame):
             else:
                 filebase = 'cliplogs/'
             self.logname = f"{filebase}{filename.split('.')[0]}.csv"
+            #Create the log for this video
             if not exists(self.logname):
                 logFile = open(self.logname,'w')
-                logFile.write('id,start_clip_ms,end_clip_ms,desc,characters\n')
+                logFile.write('id,startMs,endMs,desc,chars\n')
                 logFile.close
-            else:
-                logFile = open(self.logname,'r')
-                log = list(csv.DictReader(logFile))
-                logFile.close()
-                self.lastClipId = self.getMaxClipId()
-        self.log=log
+        # Get the log for this video
+        self.log = getLog(self.logname)
+        self.maxId = self.getMaxId()
+        # Display the clip manager
+        self.clipManager = ClipManager(self.logname)
+        self.clipManager.lower()
 
     def OnClose(self, *unused):
         """Closes the window and quit.
@@ -407,8 +428,8 @@ class Player(Tk.Frame):
         if isfile(video):  # Creation
             m = self.Instance.media_new(str(video))  # Path, unicode
             self.player.set_media(m)
-            self.parent.title("tkVLCplayer - %s" % (basename(video),))
-            self.GetLog()
+            self.parent.title("Clip Logger - %s" % (basename(video),))
+            self.createOrGetLog()
             # set the window id where to render VLC's video output
             h = self.videopanel.winfo_id()  # .winfo_visualid()?
             if _isWindows:
@@ -435,6 +456,10 @@ class Player(Tk.Frame):
             self._Pause_Play(not self.player.is_playing())
             self.player.pause()  # toggles
 
+    def get_stats(self):
+        if self.player.get_media():
+            return str(self.player.get_fps())
+
     def OnPlay(self, *unused):
         """Play video, if none is loaded, open the dialog window.
         """
@@ -456,6 +481,9 @@ class Player(Tk.Frame):
             if vol > 0:
                 self.volVar.set(vol)
                 self.volSlider.set(vol)
+            #rl disable subtitles!
+            self.player.video_set_spu(-1)
+            self.player.focus_force()
 
     def OnResize(self, *unused):
         """Adjust the window/frame to the video aspect ratio.
@@ -513,7 +541,7 @@ class Player(Tk.Frame):
                     self.timeSlider.set(t)
                     self.timeSliderLast = int(self.timeVar.get())
         # start the 1 second timer again
-        self.parent.after(1000, self.OnTick)
+        self.parent.after(100, self.OnTick)
         # adjust window to video aspect ratio, done periodically
         # on purpose since the player.video_get_size() only
         # returns non-zero sizes after playing for a while
@@ -618,48 +646,111 @@ class Player(Tk.Frame):
                 self.OnPause()
             self.player.set_time(self.player.get_time() + (frames*self.mspf()))
 
-    def log_data(self):
-        if self.player.get_media():
-            media = self.player.get_media()
-            currentTimeMs = str(self.player.get_time())
-            outRow = [id,clipstart,clipend,+'\n']
-            logFIle = open(f'{self.cliplog}.txt', "a")  # append modexxx
-            logFIle.write('|'.join(outRow))
-            logFIle.close()
-            
-
-    def logClip(self):
-        thisClipId = self.getMaxClipId() + 1
-        with open(self.logname,'a') as f:
-            out = csv.writer(f, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-            out.writerow([thisClipId,self.pendingClipStartMs,self.pendingClipEndMs])
-        self.lastClipId = thisClipId
-        self.pendingClipStartMs = None
-        self.pendingClipEndMs = None
-        self.GetLog()
-        print(f'Added clip {self.lastClipId} to log.')
-    
-    def getMaxClipId(self):
-        maxClip = 0
-        if self.log:
-            # print(json.dumps(self.log,indent=4))
-            for i in self.log:
-                if int(i['id']) > maxClip:
-                    maxClip = int(i['id'])
-        return maxClip
     
     def startClip(self):
         if self.player.get_media():
-            self.pendingClipStartMs = self.player.get_time()
+            self.wip = {
+                'logname':self.logname,
+                'id': self.getMaxId()+1,
+                'startMs':self.player.get_time()
+            }
+            self.player.video_set_marquee_string(VideoMarqueeOption.Text, \
+                str_to_bytes(f'Pending Clip: \
+                    {self.wip["startMs"]}:...'))
+
 
     def endClip(self):
         if self.player.get_media():
-            if not self.pendingClipStartMs:
-                self.pendingClipStartMs = self.player.get_time()
+            if not self.wip["startMs"]:
+                self.startClip()
             else:
-                self.pendingClipEndMs = self.player.get_time()
-                self.logClip()
+                self.wip["endMs"] = self.player.get_time()
+                self.player.video_set_marquee_string(VideoMarqueeOption.Text, \
+                    str_to_bytes(f'Pending Clip: \
+                        {self.wip["startMs"]}:{self.wip["endMs"]}'))
+                # self.logClip()
+                PopUp(self)
+    
+    def getMaxId(self):
+        maxClip = 0
+        for i in self.log:
+            if int(i['id']) > maxClip:
+                maxClip = int(i['id'])
+        return maxClip
 
+# Description Popup
+class PopUp(Tk.Tk):
+    def __init__(self,parent):      
+        Tk.Tk.__init__(self) 
+        self.parent = parent
+        self.clipData = parent.wip
+        # self.popup = Tk.Toplevel(parent)
+        self.wm_title("Clip # Description")
+        self.tkraise(self)
+        Tk.Label(self, text="Describe this clip").pack(side="left", fill="x", pady=10, padx=10)
+        self.mystring = Tk.StringVar(self)
+        self.entry = Tk.Entry(self,textvariable = self.mystring, bd=1, width=20)
+        self.entry.pack(side="left", fill="x")
+        self.button = Tk.Button(self, text="Save", command=self.on_button)
+        self.button.pack()
+        self.entry.focus_set()      
+
+    def on_button(self):
+        # print(self.mystring.get())
+        self.destroy()
+        print(self.mystring.get())
+        self.clipData['desc'] = self.mystring.get()#.replace('"','\\"')
+        self.clipData['chars']='[]'
+        #3 logs... uhg
+        logClip(self.clipData)
+        self.parent.clipManager.addEntry(self.clipData)
+        self.parent.log.append(self.clipData)
+        return 
+
+class ClipManager(Tk.Tk):
+    def __init__(self, logName):      
+        Tk.Tk.__init__(self)
+        self.geometry("400x500+504+20")
+        self.wm_title("Clips Manager")
+        self.log = getLog(logName)
+        self.buildList()
+
+    def buildList(self):
+        print('building list...')
+        if 'listBox' in self.__dict__:
+            print('killing the old one')
+            self.listBox.destroy()
+        self.listBox = Tk.Listbox(self, width=500, height=400)
+        for i in self.log:
+            fromTo = f"{i['startMs']}:{i['endMs']}"
+            self.listBox.insert(i['id'],f"{str(i['id']).zfill(4)} | {fromTo} | {i['desc']}")
+        self.listBox.pack()
+    
+    def addEntry(self,logEntry):
+        print(logEntry)
+        fromTo = f"{logEntry['startMs']}:{logEntry['endMs']}"
+        self.listBox.insert(logEntry['id'],f"{str(logEntry['id']).zfill(4)} | {fromTo} | {logEntry['desc']}")
+
+
+
+def open_popup():
+    return PopUp()
+
+# Clip storage:
+# Currently updating in 3 places... would rather these be event driven updates...
+def logClip(logLine):
+    with open(logLine['logname'],'a') as f:
+        out = csv.writer(f, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+        out.writerow([logLine['id'],logLine['startMs'],logLine['endMs'],logLine['desc'],logLine['chars']])
+    jsonOut = {logLine['id']:[logLine['startMs'], logLine['endMs'],f"{logLine['desc']}",logLine['chars']]}
+    return jsonOut
+
+def getLog(logname):
+    maxClip = 0
+    logFile = open(logname,'r')
+    log = list(csv.DictReader(logFile))
+    logFile.close()
+    return log
 
 if __name__ == "__main__":
 
@@ -697,6 +788,7 @@ if __name__ == "__main__":
                 print('%s error: no such file: %r' % (sys.argv[0], arg))
                 sys.exit(1)
 
+
     # Create a Tk.App() to handle the windowing event loop
     root = Tk.Tk()
     player = Player(root, video=_video)
@@ -712,9 +804,9 @@ if __name__ == "__main__":
     root.bind('<Down>',lambda x: player.endClip())
     root.bind('<p>',lambda x: print(json.dumps(player.log, indent=4)))
     root.bind('<space>',lambda x: player.OnPause())
+    root.bind('<r>',lambda x: player._Play('gurlag01.mkv'))
 
-    player._Play('gurlag01.mkv')
-    print(player.print_info())
+    
     root.focus_force()
 
     

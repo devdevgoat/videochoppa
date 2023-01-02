@@ -31,18 +31,26 @@ Why do I want to do that? For makeing [AMVs](https://www.youtube.com/c/devdevgoa
     python playAndTag.py
     ```
 
-1. Use the following short cut keys to generate a tag file
+1. Use the following short cut keys to generate a tag file. The general process is:
+   1. Use left and right arrows to get to clip
+   2. Hold Shift with left or right arrows to go frame by frame
+   3. Hit UP arrow (or Down) to start the clip
+   4. Hit DOWN arrow to end the clip
+   5. Fill in description of clip (optional)
+   6. Hit TAB, Space to close popup and commit to log
+   7. Review log in /cliplogs folder, will be a CSV with the same name as the video
 
 key | action
 ------------- | ------
 Up Arrow | tag clip begining point
-Down Arrow | end clip
+Down Arrow | end clip, triggers up arrow and popup description
 Left Arrow | skip back 10 seconds
 Right Arrow | skip forward 10 seconds
 Shift Left Arrow | Pause and scrub back one frame
 Shift Right Arrow | Pause and scrub forward one frame
 Space Bar | Play/Pause
 Escape | Close video
+r | Open sample video
 
 Tag files are stored in the cliplogs folder and have the following structure:
 
@@ -58,11 +66,11 @@ id|start_clip_ms|end_clip_ms|desc|characters
 - Intro/Outro time code setter (getter via api?)
 - Meta data grabber/api integration
 - character buttons/shortcuts/profiles for tagging characters
-- popup for title, desc of clip
+- popup for title?, desc (DONE) of clip
 - popup mode toggle for pausing, typing, and then resuming
 - overlays
   - ms/timer
-  - length of pending clip
+  - length of pending clip (DONE)
   - clip title?
 - gui
   - clip log
