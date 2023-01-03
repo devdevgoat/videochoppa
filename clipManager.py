@@ -1,17 +1,18 @@
 import tkinter as Tk
-from tkinter import ttk
-from tkinter import Toplevel
-import csv
+from tkinter import ttk 
+from subprocess import call
+import os
+from moviepy.editor import *
 
 class ClipManager(Tk.Tk):
-    def __init__(self, logName):      
+    def __init__(self, parent):      
         Tk.Tk.__init__(self)
-        self.geometry("250x500")
+        self.parent = parent
+        self.geometry("400x345+504+20")
         self.wm_title("Clips Manager")
-        self.tkraise(self)
-        self.log = getLog(logName)
-        # self.button = Tk.Button(self, text="Reload", command=self.buildList)
-        # self.button.pack()
+        # self.log = getLog(parent.logname)
+        self.exportButton = ttk.Button(self, text='Export All', command=self.exportAll)
+        self.exportButton.pack(side=Tk.TOP)
         self.buildList()
 
     def buildList(self):
@@ -19,25 +20,45 @@ class ClipManager(Tk.Tk):
         if 'listBox' in self.__dict__:
             print('killing the old one')
             self.listBox.destroy()
-        self.listBox = Tk.Listbox(self, width=500)
-        ii = 1
-        for i in self.log:
+        self.listBox = Tk.Listbox(self, width=500, height=300)
+        for i in self.parent.log:
             fromTo = f"{i['startMs']}:{i['endMs']}"
-            self.listBox.insert(ii,f"{i['id'].rjust(4,' ')} | {fromTo} | {i['desc']}")
-            ii+=1
+            self.listBox.insert(i['id'],f"{str(i['id']).zfill(4)} | {fromTo} | {i['desc']}")
         self.listBox.pack()
+        self.bind('<<ListboxSelect>>', self.onselect)
 
-def open_popup():
-    return PopUp()
+    def addEntry(self,logEntry):
+        print(logEntry)
+        fromTo = f"{logEntry['startMs']}:{logEntry['endMs']}"
+        self.listBox.insert(logEntry['id'],f"{str(logEntry['id']).zfill(4)} | {fromTo} | {logEntry['desc']}")
 
-def getLog(logname):
-    maxClip = 0
-    logFile = open(logname,'r')
-    log = list(csv.DictReader(logFile))
-    logFile.close()
-    return log
+    def onselect(self,evt):
+        # Note here that Tkinter passes an event object to onselect()
+        w = evt.widget
+        index = int(w.curselection()[0])
+        value = w.get(index)
+        print('You selected item %d: "%s"' % (index+1, value))
+        self.parent.player.set_time(int(self.parent.log[index]["startMs"]))
+        self.parent.parent.focus_force()
 
-# app.mainloop()
+    def exportAll(self):
+        for i in self.parent.log:
+            self.exportClip(i)
+        call(["open", 'exports/'])
 
-app = ClipManager('clipLogs/gurlag01.csv')
-app.mainloop()
+    def exportClip(self, logentry):
+        print(f'Exporting {self.parent.currentVideo}')
+        video = self.parent.currentVideo
+        videoFileName = os.path.basename(self.parent.currentVideo)
+        startSec = float(logentry['startMs'])/1000
+        endSec = float(logentry['endMs'])/1000
+        outName = f'{videoFileName}_{logentry["id"]}_{startSec}-{endSec}'
+        outName = f'exports/{outName}.mp4' if not _isWindows else f'exports\\{outName}.mp4' 
+        # ffmpeg_extract_subclip("full.mp4", start_seconds, end_seconds, targetname="cut.mp4")
+        clip = VideoFileClip(video)
+        # getting only first 5 seconds
+        clip = clip.subclip(startSec,endSec)
+        clip.write_videofile(outName, codec='libx264',
+            audio_codec='aac', 
+            temp_audiofile='temp-audio.m4a', 
+            remove_temp=True)

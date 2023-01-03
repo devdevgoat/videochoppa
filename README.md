@@ -95,3 +95,11 @@ ffmpeg on mac appears broken for m1, importing moviepy = crash. You have to inst
 
 Position has an type error, have to update a block in the vlc version for now. [src](https://github.com/oaubert/python-vlc/issues/243)
 
+# Notes/thoughts/ideas?
+
+- Need to improve lip sync workflow, could had a lipflap tool that/feature?
+  - maybe use L key to tag lip flap frames, then create 15s clips from each flap? 
+  - B could be the base lipflap which gets 15sec, then all others get put to the beginning at 5 sec each?
+  - eh, 15 is a yt short, but over kill I'm guessing... maybe everything gets 3 seconds? 
+  - 3 frames is the defacto amount though, maybe BMO 3f3f3f? 
+  - might be better to export clips to an ep level folder and use clip id's then in that folder have clip based sub folders that have 3frame videos of each lip flap? 1 frame? 
