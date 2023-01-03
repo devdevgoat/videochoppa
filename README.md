@@ -83,6 +83,15 @@ key | action
 T | Add details/notes to clip
 C | Cut all clips
 
+# Issues
 
+VLC on mac, version 3.0.16 does not like set_time very much, and results in a second or two delay in audio resumption on m1 macs (ventura). Uinsg 3.0.18 fixes this, installed via: 
 
+```bash
+brew install vlc --cask
+```
+
+ffmpeg on mac appears broken for m1, importing moviepy = crash. You have to install the correct version of ffmpeg, and then install moviepy. [src](https://github.com/Zulko/moviepy/issues/1619#issuecomment-1369341762)
+
+Position has an type error, have to update a block in the vlc version for now. [src](https://github.com/oaubert/python-vlc/issues/243)
 

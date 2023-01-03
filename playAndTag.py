@@ -47,7 +47,7 @@ __version__ = '20.05.04'  # mrJean1 at Gmail
 # import external libraries
 import vlc
 from vlc import Position, VideoMarqueeOption, str_to_bytes
-# from moviepy.editor import *
+from moviepy.editor import *
 # import standard libraries
 import sys, json, csv
 from subprocess import call
@@ -753,15 +753,18 @@ class ClipManager(Tk.Tk):
 
     def exportClip(self, logentry):
         video = self.parent.currentVideo
-        # startSec = float(logentry['startMs'])*1000
-        # endSec = float(logentry['endMs'])*1000
-        # outName = f'{video}_{logentry["id"]}_{startSec}-{endSec}'
-        # outName = f'exports/{outName}.mp4' if not _isWindows else f'exports\\{outName}.mp4' 
-        # # ffmpeg_extract_subclip("full.mp4", start_seconds, end_seconds, targetname="cut.mp4")
-        # clip = VideoFileClip("geeks.mp4")
-        # # getting only first 5 seconds
-        # clip = clip.subclip(startSec,endSec)
-        # clip.write_videofile(outName)
+        startSec = float(logentry['startMs'])/1000
+        endSec = float(logentry['endMs'])/1000
+        outName = f'{video}_{logentry["id"]}_{startSec}-{endSec}'
+        outName = f'exports/{outName}.mp4' if not _isWindows else f'exports\\{outName}.mp4' 
+        # ffmpeg_extract_subclip("full.mp4", start_seconds, end_seconds, targetname="cut.mp4")
+        clip = VideoFileClip(video)
+        # getting only first 5 seconds
+        clip = clip.subclip(startSec,endSec)
+        clip.write_videofile(outName, codec='libx264',
+            audio_codec='aac', 
+            temp_audiofile='temp-audio.m4a', 
+            remove_temp=True)
 
 def open_popup():
     return PopUp()
