@@ -47,8 +47,10 @@ __version__ = '20.05.04'  # mrJean1 at Gmail
 # import external libraries
 import vlc
 from vlc import Position, VideoMarqueeOption, str_to_bytes
+# from moviepy.editor import *
 # import standard libraries
 import sys, json, csv
+from subprocess import call
 if sys.version_info[0] < 3:
     import Tkinter as Tk
     from Tkinter import ttk
@@ -446,6 +448,7 @@ class Player(Tk.Frame):
                     self.player.set_xwindow(h)  # plays audio, no video
             else:
                 self.player.set_xwindow(h)  # fails on Windows
+            self.currentVideo = str(video)
             # FIXME: this should be made cross-platform
             self.OnPlay()
 
@@ -483,7 +486,6 @@ class Player(Tk.Frame):
                 self.volSlider.set(vol)
             #rl disable subtitles!
             self.player.video_set_spu(-1)
-            self.player.focus_force()
 
     def OnResize(self, *unused):
         """Adjust the window/frame to the video aspect ratio.
@@ -714,6 +716,8 @@ class ClipManager(Tk.Tk):
         self.geometry("400x345+504+20")
         self.wm_title("Clips Manager")
         self.log = getLog(parent.logname)
+        self.exportButton = ttk.Button(self, text='Export All', command=self.exportAll)
+        self.exportButton.pack(side=Tk.TOP)
         self.buildList()
 
     def buildList(self):
@@ -721,7 +725,7 @@ class ClipManager(Tk.Tk):
         if 'listBox' in self.__dict__:
             print('killing the old one')
             self.listBox.destroy()
-        self.listBox = Tk.Listbox(self, width=500, height=400)
+        self.listBox = Tk.Listbox(self, width=500, height=300)
         for i in self.log:
             fromTo = f"{i['startMs']}:{i['endMs']}"
             self.listBox.insert(i['id'],f"{str(i['id']).zfill(4)} | {fromTo} | {i['desc']}")
@@ -740,8 +744,24 @@ class ClipManager(Tk.Tk):
         value = w.get(index)
         print('You selected item %d: "%s"' % (index+1, value))
         self.parent.player.set_time(int(self.parent.log[index]["startMs"]))
+        self.parent.parent.focus_force()
 
+    def exportAll(self):
+        for i in self.log:
+            self.exportClip(i)
+        call(["open", 'exports/'])
 
+    def exportClip(self, logentry):
+        video = self.parent.currentVideo
+        # startSec = float(logentry['startMs'])*1000
+        # endSec = float(logentry['endMs'])*1000
+        # outName = f'{video}_{logentry["id"]}_{startSec}-{endSec}'
+        # outName = f'exports/{outName}.mp4' if not _isWindows else f'exports\\{outName}.mp4' 
+        # # ffmpeg_extract_subclip("full.mp4", start_seconds, end_seconds, targetname="cut.mp4")
+        # clip = VideoFileClip("geeks.mp4")
+        # # getting only first 5 seconds
+        # clip = clip.subclip(startSec,endSec)
+        # clip.write_videofile(outName)
 
 def open_popup():
     return PopUp()
