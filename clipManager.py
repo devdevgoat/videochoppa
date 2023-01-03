@@ -5,10 +5,11 @@ import os
 from moviepy.editor import *
 
 class ClipManager(Tk.Tk):
-    def __init__(self, parent):      
+    def __init__(self, parent):   
+        print('Loading clip manager...')   
         Tk.Tk.__init__(self)
         self.parent = parent
-        self.geometry("400x345+504+20")
+        self.geometry("400x345+504+20") #
         self.wm_title("Clips Manager")
         # self.log = getLog(parent.logname)
         self.exportButton = ttk.Button(self, text='Export All', command=self.exportAll)
@@ -22,6 +23,7 @@ class ClipManager(Tk.Tk):
             self.listBox.destroy()
         self.listBox = Tk.Listbox(self, width=500, height=300)
         for i in self.parent.log:
+            print(f'Adding entry {i["id"]} to lisbox..' )
             fromTo = f"{i['startMs']}:{i['endMs']}"
             self.listBox.insert(i['id'],f"{str(i['id']).zfill(4)} | {fromTo} | {i['desc']}")
         self.listBox.pack()
@@ -44,7 +46,8 @@ class ClipManager(Tk.Tk):
     def exportAll(self):
         for i in self.parent.log:
             self.exportClip(i)
-        call(["open", 'exports/'])
+        if not self.parent._isWindows:
+            call(["open", 'exports/'])
 
     def exportClip(self, logentry):
         print(f'Exporting {self.parent.currentVideo}')
@@ -53,7 +56,7 @@ class ClipManager(Tk.Tk):
         startSec = float(logentry['startMs'])/1000
         endSec = float(logentry['endMs'])/1000
         outName = f'{videoFileName}_{logentry["id"]}_{startSec}-{endSec}'
-        outName = f'exports/{outName}.mp4' if not _isWindows else f'exports\\{outName}.mp4' 
+        outName = f'exports/{outName}.mp4' if not self.parent._isWindows else f'exports\\{outName}.mp4' 
         # ffmpeg_extract_subclip("full.mp4", start_seconds, end_seconds, targetname="cut.mp4")
         clip = VideoFileClip(video)
         # getting only first 5 seconds

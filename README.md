@@ -94,6 +94,20 @@ brew install vlc --cask
 ffmpeg on mac appears broken for m1, importing moviepy = crash. You have to install the correct version of ffmpeg, and then install moviepy. [src](https://github.com/Zulko/moviepy/issues/1619#issuecomment-1369341762)
 
 Position has an type error, have to update a block in the vlc version for now. [src](https://github.com/oaubert/python-vlc/issues/243)
+```python
+# Old mappings are in comment form to compare before/after
+
+Position.bottom       = 8  #Position(6)
+Position.bottom_left  = 9  #Position(7)
+Position.bottom_right = 10 #Position(8)
+Position.center       = 0  #Position(0)
+Position.disable      = -1 #Position(-1)
+Position.left         = 1  #Position(1)
+Position.right        = 2  #Position(2)
+Position.top          = 4  #Position(3)
+Position.top_left     = 5  #Position(4)
+Position.top_right    = 6  #Position(5)
+```
 
 # Notes/thoughts/ideas?
 
