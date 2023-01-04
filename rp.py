@@ -3,7 +3,7 @@ import vlc
 from vlc import Position, VideoMarqueeOption, str_to_bytes
 
 # Import MY libraries
-from simpletest import *
+from player import *
 from popup import PopUp
 from cliplog import ClipLog
 
