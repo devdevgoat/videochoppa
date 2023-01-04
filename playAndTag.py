@@ -679,8 +679,8 @@ def logClip(logLine):
     with open(logLine['logname'],'a') as f:
         out = csv.writer(f, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
         out.writerow([logLine['id'],logLine['startMs'],logLine['endMs'],logLine['desc'],logLine['chars']])
-    jsonOut = {logLine['id']:[logLine['startMs'], logLine['endMs'],f"{logLine['desc']}",logLine['chars']]}
-    return jsonOut
+    # jsonOut = {logLine['id']:[logLine['startMs'], logLine['endMs'],f"{logLine['desc']}",logLine['chars']]}
+    return logLine
 
 def getLog(logname):
     maxClip = 0

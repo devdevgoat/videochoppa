@@ -4,17 +4,17 @@ from subprocess import call
 import os
 from moviepy.editor import *
 
-class ClipManager(Tk.Tk):
+class ClipManager(Tk.Frame):
     def __init__(self, parent):   
         print('Loading clip manager...')   
-        Tk.Tk.__init__(self)
-        self.parent = parent
+        Tk.Frame.__init__(self, parent)
+        self.root = parent
         self.geometry("400x345+504+20") #
         self.wm_title("Clips Manager")
         # self.log = getLog(parent.logname)
         self.exportButton = ttk.Button(self, text='Export All', command=self.exportAll)
         self.exportButton.pack(side=Tk.TOP)
-        self.buildList()
+        # self.buildList()
 
     def buildList(self):
         print('building list...')
@@ -22,7 +22,7 @@ class ClipManager(Tk.Tk):
             print('killing the old one')
             self.listBox.destroy()
         self.listBox = Tk.Listbox(self, width=500, height=300)
-        for i in self.parent.log:
+        for i in self.root.cliplog.log:
             print(f'Adding entry {i["id"]} to lisbox..' )
             fromTo = f"{i['startMs']}:{i['endMs']}"
             self.listBox.insert(i['id'],f"{str(i['id']).zfill(4)} | {fromTo} | {i['desc']}")
@@ -40,23 +40,23 @@ class ClipManager(Tk.Tk):
         index = int(w.curselection()[0])
         value = w.get(index)
         print('You selected item %d: "%s"' % (index+1, value))
-        self.parent.player.set_time(int(self.parent.log[index]["startMs"]))
-        self.parent.parent.focus_force()
+        self.root.player.set_time(int(self.root.log[index]["startMs"]))
+        self.root.parent.focus_force()
 
     def exportAll(self):
-        for i in self.parent.log:
+        for i in self.root.log:
             self.exportClip(i)
-        if not self.parent._isWindows:
+        if not self.root._isWindows:
             call(["open", 'exports/'])
 
     def exportClip(self, logentry):
-        print(f'Exporting {self.parent.currentVideo}')
-        video = self.parent.currentVideo
-        videoFileName = os.path.basename(self.parent.currentVideo)
+        print(f'Exporting {self.root.currentVideo}')
+        video = self.root.currentVideo
+        videoFileName = os.path.basename(self.root.currentVideo)
         startSec = float(logentry['startMs'])/1000
         endSec = float(logentry['endMs'])/1000
         outName = f'{videoFileName}_{logentry["id"]}_{startSec}-{endSec}'
-        outName = f'exports/{outName}.mp4' if not self.parent._isWindows else f'exports\\{outName}.mp4' 
+        outName = f'exports/{outName}.mp4' if not self.root._isWindows else f'exports\\{outName}.mp4' 
         # ffmpeg_extract_subclip("full.mp4", start_seconds, end_seconds, targetname="cut.mp4")
         clip = VideoFileClip(video)
         # getting only first 5 seconds
