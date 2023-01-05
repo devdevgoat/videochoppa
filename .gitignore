@@ -152,3 +152,4 @@ cython_debug/
 #.idea/
 exports/*.mp4
 imports/*
+exports/gurlag01/.DS_Store

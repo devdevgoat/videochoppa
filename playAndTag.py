@@ -487,6 +487,7 @@ class Player(Tk.Frame):
                 self.volVar.set(vol)
                 self.volSlider.set(vol)
             #rl disable subtitles!
+            print('Disabling subtitles...')
             self.player.video_set_spu(-1)
 
     def OnResize(self, *unused):

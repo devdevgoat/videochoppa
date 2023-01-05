@@ -52,7 +52,7 @@ class ClipManager(Tk.Tk):
         file_list = glob.glob(f'{stillsPath}/*.png')  # Get all the pngs in the current directory
         clips = [ImageClip(m).set_duration(2)
                 for m in file_list]
-        concat_clip = concatenate_videoclips(clips, method="compose")
+        concat_clip = concatenate_videoclips(clips.sort(), method="compose")
         concat_clip.write_videofile(f"{self.parent.getOutputPath()}/stills.mp4", fps=1)
 
     def exportClip(self, logentry):
