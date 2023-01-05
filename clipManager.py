@@ -1,7 +1,8 @@
 import tkinter as Tk
 from tkinter import ttk 
 from subprocess import call
-import os
+import os, glob
+from pathlib import Path
 from moviepy.editor import *
 
 class ClipManager(Tk.Tk):
@@ -46,19 +47,32 @@ class ClipManager(Tk.Tk):
             self.exportClip(i)
         call(["open", 'exports/'])
 
+    def exportStillsAsSingleClip(self):
+        stillsPath = f"{self.parent.getOutputPath()}/stills"
+        file_list = glob.glob(f'{stillsPath}/*.png')  # Get all the pngs in the current directory
+        clips = [ImageClip(m).set_duration(2)
+                for m in file_list]
+        concat_clip = concatenate_videoclips(clips, method="compose")
+        concat_clip.write_videofile(f"{self.parent.getOutputPath()}/stills.mp4", fps=1)
+
     def exportClip(self, logentry):
         print(f'Exporting {self.parent.currentVideo}')
-        video = self.parent.currentVideo
-        videoFileName = os.path.basename(self.parent.currentVideo)
+        outputPath = self.parent.getOutputPath()
+        Path(outputPath).mkdir(parents=True, exist_ok=True)
         startSec = float(logentry['startMs'])/1000
         endSec = float(logentry['endMs'])/1000
-        outName = f'{videoFileName}_{logentry["id"]}_{startSec}-{endSec}'
-        outName = f'exports/{outName}.mp4' if not _isWindows else f'exports\\{outName}.mp4' 
+        outName = f'{logentry["id"]}_{startSec}-{endSec}'
+        outName = f'{outputPath}/{outName}.mp4' if not self.parent._isWindows else f'exports\\{outName}.mp4' 
         # ffmpeg_extract_subclip("full.mp4", start_seconds, end_seconds, targetname="cut.mp4")
-        clip = VideoFileClip(video)
+        clip = VideoFileClip(self.parent.currentVideo)
         # getting only first 5 seconds
         clip = clip.subclip(startSec,endSec)
         clip.write_videofile(outName, codec='libx264',
             audio_codec='aac', 
             temp_audiofile='temp-audio.m4a', 
             remove_temp=True)
+
+        print("Generating stills video...")
+        self.exportStillsAsSingleClip()
+
+        #media_player.video_take_snapshot

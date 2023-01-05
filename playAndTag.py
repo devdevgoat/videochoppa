@@ -193,7 +193,7 @@ class Player(Tk.Frame):
         self.parent = parent  # == root
         self.parent.title(title or "tkVLCplayer")
         self.video = expanduser(video)
-
+        self._isWindows = _isWindows
         # Menu Bar
         #   File Menu
         menubar = Tk.Menu(self.parent)
@@ -682,6 +682,24 @@ class Player(Tk.Frame):
                 maxClip = int(i['id'])
         return maxClip
 
+    def getOutputPath(self):
+        videoFileName = basename(self.currentVideo).split(".")[0]
+        Path(videoFileName).mkdir(parents=True, exist_ok=True)
+        return f"exports/{videoFileName}"
+    
+    def captureStillByType(self, type):
+        if not self.player.is_playing():
+            currentFrame = int(self.player.get_time() / self.mspf())
+            outputPath = f"{self.getOutputPath()}/stills"
+            Path(outputPath).mkdir(parents=True, exist_ok=True)
+            outputFile = f"{outputPath}/{currentFrame}_{type}.png"
+            self.player.video_take_snapshot(0,outputFile,0,0)
+
+    def printCurrentFrame(self):
+        print(self.player.get_time())
+        print(self.mspf())
+        print( int(self.player.get_time() / self.mspf()))
+
 # Description Popup
 class PopUp(Tk.Tk):
     def __init__(self,parent):      
@@ -731,6 +749,9 @@ def getLog(logname):
     log = list(csv.DictReader(logFile))
     logFile.close()
     return log
+
+
+
 
 if __name__ == "__main__":
 
@@ -782,9 +803,14 @@ if __name__ == "__main__":
     root.bind('<Escape>',lambda x: player.quit())
     root.bind('<Up>',lambda x: player.startClip())
     root.bind('<Down>',lambda x: player.endClip())
-    root.bind('<p>',lambda x: print(json.dumps(player.log, indent=4)))
+    root.bind('<p>',lambda x: player.printCurrentFrame())
     root.bind('<space>',lambda x: player.OnPause())
     root.bind('<r>',lambda x: player._Play('gurlag01.mkv'))
+
+    # bindings for capturing stills
+    root.bind('<o>',lambda x: player.captureStillByType('open'))
+    root.bind('<m>',lambda x: player.captureStillByType('mid'))
+    root.bind('<c>',lambda x: player.captureStillByType('closed'))
     
 
     
