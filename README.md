@@ -58,6 +58,21 @@ id|start_clip_ms|end_clip_ms|desc|characters
 -|-|-|-|-
 0|3492|5078|"some text"*|[goku,gohan,chichi]*
 
+
+1/4 updates
+
+Click the Export All button to generate clips in the output folder! If you don't see the clips manager, it may be loading in the background.
+Additionally, use the following short cuts (while paused) to capture stills and have still video be exported at the same time. This is used for getting easily accessible still frames needed for [lip syncing](https://www.youtube.com/watch?v=4U1gKUMdQvA&t=972s)
+
+key | action
+------------- | ------
+o | capture 'open' mouth still
+m | capture 'middle' mouth still
+c | capture 'closed' mouth still
+
+All stills are put in a stills folder under the exports/<video name>/stills folder. stills.mp4 will have all stills in 1sec increments
+
+
 \* = pending 
   
 # Pending features
