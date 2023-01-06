@@ -12,8 +12,10 @@ class ClipManager(Tk.Tk):
         self.geometry("400x345+504+20")
         self.wm_title("Clips Manager")
         # self.log = getLog(parent.logname)
-        self.exportButton = ttk.Button(self, text='Export All', command=self.exportAll)
-        self.exportButton.pack(side=Tk.TOP)
+        self.exportAllButton = ttk.Button(self, text='Export All', command=self.exportAll).pack(side=Tk.TOP)
+        self.exportSelButton = ttk.Button(self, text='Export Selected', command=self.exportSelected).pack(side=Tk.TOP)
+        self.exportStillsButton = ttk.Button(self, text='Export Stills', command=self.exportStillsAsSingleClip).pack(side=Tk.TOP)
+        # self.exportButton.pack(side=Tk.TOP)
         self.buildList()
 
     def buildList(self):
@@ -39,6 +41,7 @@ class ClipManager(Tk.Tk):
         index = int(w.curselection()[0])
         value = w.get(index)
         print('You selected item %d: "%s"' % (index+1, value))
+        self.selectedLogEntry = self.parent.log[index]
         self.parent.player.set_time(int(self.parent.log[index]["startMs"]))
         self.parent.parent.focus_force()
 
@@ -46,13 +49,19 @@ class ClipManager(Tk.Tk):
         for i in self.parent.log:
             self.exportClip(i)
         call(["open", 'exports/'])
+    
+    def exportSelected(self):
+        if self.selectedLogEntry is not None:
+            self.exportClip(self.selectedLogEntry)
 
     def exportStillsAsSingleClip(self):
         stillsPath = f"{self.parent.getOutputPath()}/stills"
         file_list = glob.glob(f'{stillsPath}/*.png')  # Get all the pngs in the current directory
-        clips = [ImageClip(m).set_duration(2)
-                for m in file_list]
-        concat_clip = concatenate_videoclips(clips.sort(), method="compose")
+        clips = [ImageClip(m).set_duration(2) for m in file_list]
+        # print(len(clips))
+        # clips_sorted = clips.sort() # need a special sort library
+        # print(clips_sorted)
+        concat_clip = concatenate_videoclips(clips, method="compose")
         concat_clip.write_videofile(f"{self.parent.getOutputPath()}/stills.mp4", fps=1)
 
     def exportClip(self, logentry):

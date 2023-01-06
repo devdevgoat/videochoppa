@@ -153,3 +153,6 @@ cython_debug/
 exports/*.mp4
 imports/*
 exports/gurlag01/.DS_Store
+/exports/*
+exports/.DS_Store
+.DS_Store
